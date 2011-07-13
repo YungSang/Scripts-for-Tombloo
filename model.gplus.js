@@ -82,8 +82,11 @@ models.register({
 		if (ps.type == 'video') {
 			link.push([null,ps.pageUrl,null,"application/x-shockwave-flash","video"]);
 		}
-		else {
+		else if (ps.type == 'photo') {
 			link.push([null,ps.pageUrl,null,"text/html","document"]);
+		}
+		else {
+			link.push([null,ps.itemUrl || ps.pageUrl,null,"text/html","document"]);
 		}
 		link.push(null,null,null,null,null);
 		link.push(null,null,null,null,null);
