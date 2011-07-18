@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.0.0
+ * @version : 2.0.1
  * @date    : 2011-07-18
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -51,8 +51,8 @@ models.register({
 	getScopeData : function(oz) {
 		var self = this;
 		return this.getInitialData(oz).addCallback(function(data) {
-			var data = evalInSandbox('(' + data[0][0][1] + ')', self.HOME_URL);
-			var data = evalInSandbox('(' + data[11][0] + ')', self.HOME_URL);
+			data = evalInSandbox('(' + data[0][0][1] + ')', self.HOME_URL);
+			data = evalInSandbox('(' + data[11][0] + ')', self.HOME_URL);
 			return data;
 		});
 	},
