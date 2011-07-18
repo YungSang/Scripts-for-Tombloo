@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.0.1
+ * @version : 2.0.2
  * @date    : 2011-07-18
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -179,46 +179,45 @@ models.register({
 	},
 
 	createScopeSpar : function(scope) {
-		var aclEntries = [
-			{
-				scope : {
-					scopeType   : "anyone",
-					name        : "Anyone",
-					id          : "anyone",
-					me          : true,
-					requiresKey : false
-				},
-				role : 20
-			},
-			{
-				scope : {
-					scopeType   : "anyone",
-					name        : "Anyone",
-					id          : "anyone",
-					me          : true,
-					requiresKey : false
-				},
-				role : 60
-			}
-		];
+		var publicScope = {
+			scopeType   : "anyone",
+			name        : "Anyone",
+			id          : "anyone",
+			me          : true,
+			requiresKey : false
+		};
 
-		if (scope['aclEntries'][2]['scope']['scopeType'] != 'anyone') {
-			aclEntries[0]['scope'] = {
-				scopeType   : scope['aclEntries'][3]['scope']['scopeType'],
-				name        : scope['aclEntries'][3]['scope']['name'],
-				id          : scope['aclEntries'][3]['scope']['id'],
-				me          : false,
-				requiresKey : scope['aclEntries'][3]['scope']['requiresKey'],
-				groupType   : scope['aclEntries'][3]['scope']['groupType']
-			};
-			aclEntries[1]['scope'] = {
-				scopeType   : scope['aclEntries'][2]['scope']['scopeType'],
-				name        : scope['aclEntries'][2]['scope']['name'],
-				id          : scope['aclEntries'][2]['scope']['id'],
-				me          : false,
-				requiresKey : scope['aclEntries'][2]['scope']['requiresKey'],
-				groupType   : scope['aclEntries'][2]['scope']['groupType']
-			};
+		var aclEntries = [];
+
+		for (var i = 2, len = scope['aclEntries'].length ; i < len ; i+=2) {
+			if (scope['aclEntries'][i]['scope']['scopeType'] == 'anyone') {
+				aclEntries.push({
+					scope : publicScope,
+					role  : 20
+				});
+				aclEntries.push({
+					scope : publicScope,
+					role  : 60
+				});
+			}
+			else {
+				var limitedScope = {
+					scopeType   : scope['aclEntries'][i]['scope']['scopeType'],
+					name        : scope['aclEntries'][i]['scope']['name'],
+					id          : scope['aclEntries'][i]['scope']['id'],
+					me          : false,
+					requiresKey : scope['aclEntries'][i]['scope']['requiresKey'],
+					groupType   : scope['aclEntries'][i]['scope']['groupType']
+				};
+				aclEntries.push({
+					scope : limitedScope,
+					role  : 20
+				});
+				aclEntries.push({
+					scope : limitedScope,
+					role  : 60
+				});
+			}
 		}
 
 		return JSON.stringify({
