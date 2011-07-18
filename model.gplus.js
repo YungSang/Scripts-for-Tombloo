@@ -159,7 +159,7 @@ models.register({
 				{
 					scope : {
 						scopeType   : "anyone",
-						name        :	"Anyone",
+						name        : "Anyone",
 						id          : "anyone",
 						me          : true,
 						requiresKey : false
