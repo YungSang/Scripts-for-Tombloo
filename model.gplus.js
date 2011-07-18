@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 1.0.3
+ * @version : 1.0.4
  * @date    : 2011-07-17
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -13,7 +13,7 @@ models.register({
 	HOME_URL : 'https://plus.google.com/',
 	POST_URL : 'https://plus.google.com/u/0/_/sharebox/post/',
 	sequence : 0,
-	OZDATA_REGEX  : /<script>[\s\S]*?\bvar\s+OZ_initData\s*=\s*([{](?:(?=[\s\S]*?(?![}]\s*;[\s\S]*?<\/script>))[\s\S]*?[}]\s*;))[\s\S]*?<\/script>/i,
+	OZDATA_REGEX : /<script\b[^>]*>[\s\S]*?\btick\b[\s\S]*?\bvar\s+OZ_initData\s*=\s*([{]+(?:(?:(?![}]\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>)[\s\S])*)*[}])\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>/i,
 	YOUTUBE_REGEX : /http:\/\/(?:.*\.)?youtube.com\/watch\?v=([a-zA-Z0-9_-]+)[-_.!~*'()a-zA-Z0-9;\/?:@&=+\$,%#]*/g,
 
 	check : function(ps) {
@@ -28,9 +28,7 @@ models.register({
 		var self = this;
 		return request(this.HOME_URL).addCallback(function(res) {
 			var OZ_initData = res.responseText.match(self.OZDATA_REGEX)[1];
-			var sandbox = Components.utils.Sandbox(self.HOME_URL);
-			var result = Components.utils.evalInSandbox('var OZ_initData = ' + OZ_initData + ';', sandbox);
-			return sandbox.OZ_initData;
+			return evalInSandbox('(' + OZ_initData + ')', self.HOME_URL);
 		});
 	},
 
