@@ -11,6 +11,7 @@ models.register({
 	name     : 'Google+',
 	ICON     : 'http://ssl.gstatic.com/s2/oz/images/favicon.ico',
 	HOME_URL : 'https://plus.google.com/',
+	INIT_URL : 'https://plus.google.com/u/0/_/initialdata',
 	POST_URL : 'https://plus.google.com/u/0/_/sharebox/post/',
 	sequence : 0,
 	OZDATA_REGEX : /<script\b[^>]*>[\s\S]*?\btick\b[\s\S]*?\bvar\s+OZ_initData\s*=\s*([{]+(?:(?:(?![}]\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>)[\s\S])*)*[}])\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>/i,
@@ -32,6 +33,30 @@ models.register({
 		});
 	},
 
+	getInitialData : function(oz) {
+		var self = this;
+		return request(this.INIT_URL + '?_reqid=' + this.getReqid() + '&rt=j', {
+			method : 'POST',
+			redirectionLimit : 0,
+			sendContent : {
+				key : 11,
+				at  : oz[1][15]
+			}
+		}).addCallback(function(res) {
+			var initialData = res.responseText.substr(4).replace(/(\\n|\n)/g, '');
+			return evalInSandbox('(' + initialData + ')', self.HOME_URL);
+		});
+	},
+
+	getScopeData : function(oz) {
+		var self = this;
+		return this.getInitialData(oz).addCallback(function(data) {
+			var data = evalInSandbox('(' + data[0][0][1] + ')', self.HOME_URL);
+			var data = evalInSandbox('(' + data[11][0] + ')', self.HOME_URL);
+			return data;
+		});
+	},
+
 	post : function(ps) {
 		var self = this;
 
@@ -40,7 +65,9 @@ models.register({
 		}
 
 		return this.getOZData().addCallback(function(oz) {
-			self._post(ps, oz);
+			self.getScopeData(oz).addCallback(function(scope) {
+				self._post(ps, oz, scope);
+			});
 		});
 	},
 
@@ -151,34 +178,55 @@ models.register({
 		return('image/jpeg');
 	},
 
-	createScopeSpar : function(oz) {
-		return JSON.stringify({
-			aclEntries : [
-				{
-					scope : {
-						scopeType   : "anyone",
-						name        : "Anyone",
-						id          : "anyone",
-						me          : true,
-						requiresKey : false
-					},
-					role : 20
+	createScopeSpar : function(scope) {
+		var aclEntries = [
+			{
+				scope : {
+					scopeType   : "anyone",
+					name        : "Anyone",
+					id          : "anyone",
+					me          : true,
+					requiresKey : false
 				},
-				{
-					scope : {
-						scopeType   : "anyone",
-						name        : "Anyone",
-						id          : "anyone",
-						me          : true,
-						requiresKey : false
-					},
-					role : 60
-				}
-			]
+				role : 20
+			},
+			{
+				scope : {
+					scopeType   : "anyone",
+					name        : "Anyone",
+					id          : "anyone",
+					me          : true,
+					requiresKey : false
+				},
+				role : 60
+			}
+		];
+
+		if (scope['aclEntries'][2]['scope']['scopeType'] != 'anyone') {
+			aclEntries[0]['scope'] = {
+				scopeType   : scope['aclEntries'][3]['scope']['scopeType'],
+				name        : scope['aclEntries'][3]['scope']['name'],
+				id          : scope['aclEntries'][3]['scope']['id'],
+				me          : false,
+				requiresKey : scope['aclEntries'][3]['scope']['requiresKey'],
+				groupType   : scope['aclEntries'][3]['scope']['groupType']
+			};
+			aclEntries[1]['scope'] = {
+				scopeType   : scope['aclEntries'][2]['scope']['scopeType'],
+				name        : scope['aclEntries'][2]['scope']['name'],
+				id          : scope['aclEntries'][2]['scope']['id'],
+				me          : false,
+				requiresKey : scope['aclEntries'][2]['scope']['requiresKey'],
+				groupType   : scope['aclEntries'][2]['scope']['groupType']
+			};
+		}
+
+		return JSON.stringify({
+			aclEntries : aclEntries
 		});
 	},
 
-	_post : function(ps, oz) {
+	_post : function(ps, oz, scope) {
 		var self = this;
 
 		var spar = [];
@@ -199,7 +247,7 @@ models.register({
 		}
 
 		spar.push(null);
-		spar.push(this.createScopeSpar(oz));
+		spar.push(this.createScopeSpar(scope));
 		spar.push(true, [], true, true, null, [], false, false);
 
 		spar = JSON.stringify(spar);
