@@ -1,11 +1,13 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.1.0
+ * @version : 2.1.1
  * @date    : 2011-07-18
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
+ *
+ * Special Thanks to polygon planet (https://github.com/polygonplanet)
  */
 models.register({
 	name     : 'Google+',
