@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.0.2
+ * @version : 2.1.0
  * @date    : 2011-07-18
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -48,12 +48,37 @@ models.register({
 		});
 	},
 
-	getScopeData : function(oz) {
+	getDefaultScope : function(oz) {
 		var self = this;
 		return this.getInitialData(oz).addCallback(function(data) {
 			data = evalInSandbox('(' + data[0][0][1] + ')', self.HOME_URL);
 			data = evalInSandbox('(' + data[11][0] + ')', self.HOME_URL);
-			return data;
+
+			var aclEntries = [];
+
+			for (var i = 2, len = data['aclEntries'].length ; i < len ; i+=2) {
+				if (data['aclEntries'][i]['scope']['scopeType'] == 'anyone') {
+					aclEntries.push({
+						scopeType   : "anyone",
+						name        : "Anyone",
+						id          : "anyone",
+						me          : true,
+						requiresKey : false
+					});
+				}
+				else {
+					aclEntries.push({
+						scopeType   : data['aclEntries'][i]['scope']['scopeType'],
+						name        : data['aclEntries'][i]['scope']['name'],
+						id          : data['aclEntries'][i]['scope']['id'],
+						me          : false,
+						requiresKey : data['aclEntries'][i]['scope']['requiresKey'],
+						groupType   : data['aclEntries'][i]['scope']['groupType']
+					});
+				}
+			}
+
+			return JSON.stringify(aclEntries);
 		});
 	},
 
@@ -65,9 +90,15 @@ models.register({
 		}
 
 		return this.getOZData().addCallback(function(oz) {
-			self.getScopeData(oz).addCallback(function(scope) {
-				self._post(ps, oz, scope);
-			});
+			if (ps.scope) {
+				self._post(ps, oz);
+			}
+			else {
+				self.getDefaultScope(oz).addCallback(function(scope) {
+					ps.scope = scope;
+					self._post(ps, oz);
+				});
+			}
 		});
 	},
 
@@ -178,46 +209,20 @@ models.register({
 		return('image/jpeg');
 	},
 
-	createScopeSpar : function(scope) {
-		var publicScope = {
-			scopeType   : "anyone",
-			name        : "Anyone",
-			id          : "anyone",
-			me          : true,
-			requiresKey : false
-		};
-
+	createScopeSpar : function(ps) {
 		var aclEntries = [];
 
-		for (var i = 2, len = scope['aclEntries'].length ; i < len ; i+=2) {
-			if (scope['aclEntries'][i]['scope']['scopeType'] == 'anyone') {
-				aclEntries.push({
-					scope : publicScope,
-					role  : 20
-				});
-				aclEntries.push({
-					scope : publicScope,
-					role  : 60
-				});
-			}
-			else {
-				var limitedScope = {
-					scopeType   : scope['aclEntries'][i]['scope']['scopeType'],
-					name        : scope['aclEntries'][i]['scope']['name'],
-					id          : scope['aclEntries'][i]['scope']['id'],
-					me          : false,
-					requiresKey : scope['aclEntries'][i]['scope']['requiresKey'],
-					groupType   : scope['aclEntries'][i]['scope']['groupType']
-				};
-				aclEntries.push({
-					scope : limitedScope,
-					role  : 20
-				});
-				aclEntries.push({
-					scope : limitedScope,
-					role  : 60
-				});
-			}
+		var scopes = JSON.parse(ps.scope);
+
+		for (var i = 0, len = scopes.length ; i < len ; i++) {
+			aclEntries.push({
+				scope : scopes[i],
+				role  : 20
+			});
+			aclEntries.push({
+				scope : scopes[i],
+				role  : 60
+			});
 		}
 
 		return JSON.stringify({
@@ -225,7 +230,7 @@ models.register({
 		});
 	},
 
-	_post : function(ps, oz, scope) {
+	_post : function(ps, oz) {
 		var self = this;
 
 		var spar = [];
@@ -246,7 +251,7 @@ models.register({
 		}
 
 		spar.push(null);
-		spar.push(this.createScopeSpar(scope));
+		spar.push(this.createScopeSpar(ps));
 		spar.push(true, [], true, true, null, [], false, false);
 
 		spar = JSON.stringify(spar);
@@ -266,3 +271,80 @@ models.register({
 		});
 	}
 });
+
+(function() {
+	var circles = [];
+
+	models['Google+'].getOZData().addCallback(function(oz) {
+		oz[12][0].forEach(function(circle) {
+			let code, id, name, has;
+			code = circle[0][0];
+			id   = [oz[2][0], code].join('.');
+			name = circle[1][0];
+			if (code && name) {
+				has = false;
+				circles.forEach(function(c) {
+					if (!has && c[0].id === id) {
+						has = true;
+					}
+				});
+				if (!has) {
+					circles.push([{
+						scopeType   : 'focusGroup',
+						name        : name,
+						id          : id,
+						me          : false,
+						requiresKey : false,
+						groupType   : 'p'
+					}]);
+				}
+			}
+		});
+		circles.push([{
+			scopeType   : 'focusGroup',
+			name        : 'Your circles',
+			id          : [oz[2][0], '1c'].join('.'),
+			me          : false,
+			requiresKey : false,
+			groupType   : 'a'
+		}]);
+		circles.push([{
+			scopeType   : 'focusGroup',
+			name        : 'Extended circles',
+			id          : [oz[2][0], '1f'].join('.'),
+			me          : false,
+			requiresKey : false,
+			groupType   : 'e'
+		}]);
+		circles.push([{
+			scopeType   : 'anyone',
+			name        : 'Anyone',
+			id          : 'anyone',
+			me          : true,
+			requiresKey : false
+		}]);
+	});
+
+	QuickPostForm.show = function(ps, position, message) {
+		var winQuickPostForm = openDialog(
+			'chrome://tombloo/content/quickPostForm.xul',
+			'chrome,alwaysRaised=yes,resizable=yes,dependent=yes,titlebar=no', ps, position, message);
+
+		winQuickPostForm.onload = function() {
+			var doc = winQuickPostForm.document;
+			var selectBox = SELECT({name : 'scope', style: 'font-size:1em'});
+
+			appendChildNodes(selectBox, OPTION({value: ''}, 'Select Google+ Stream (or same as last one)'));
+
+			for (var i = 0, len = circles.length ; i < len ; i++) {
+				var circle = circles[i];
+				appendChildNodes(selectBox, OPTION({value: JSON.stringify(circle)}, circle[0].name));
+			}
+			appendChildNodes(doc.getElementById('form'), selectBox);
+
+			var formPanel = winQuickPostForm.dialogPanel.formPanel;
+			formPanel.dialogPanel.sizeToContent();
+			formPanel.fields['scope'] = selectBox;
+		};
+	};
+})();
