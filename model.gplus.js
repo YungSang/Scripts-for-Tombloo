@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.1.1
+ * @version : 2.1.2
  * @date    : 2011-07-18
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -331,6 +331,8 @@ models.register({
 		var winQuickPostForm = openDialog(
 			'chrome://tombloo/content/quickPostForm.xul',
 			'chrome,alwaysRaised=yes,resizable=yes,dependent=yes,titlebar=no', ps, position, message);
+
+		if (!models['Google+'].check(ps)) return;
 
 		winQuickPostForm.onload = function() {
 			var doc = winQuickPostForm.document;
