@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 2.1.2
- * @date    : 2011-07-18
+ * @version : 3.0.0
+ * @date    : 2011-07-19
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -20,7 +20,7 @@ models.register({
 	YOUTUBE_REGEX : /http:\/\/(?:.*\.)?youtube.com\/watch\?v=([a-zA-Z0-9_-]+)[-_.!~*'()a-zA-Z0-9;\/?:@&=+\$,%#]*/g,
 
 	check : function(ps) {
-		return (/(regular|photo|quote|link|video)/).test(ps.type) && !ps.file;
+		return (/(regular|photo|quote|link|video)/).test(ps.type);
 	},
 
 	getAuthCookie : function() {
@@ -92,15 +92,18 @@ models.register({
 		}
 
 		return this.getOZData().addCallback(function(oz) {
-			if (ps.scope) {
-				self._post(ps, oz);
-			}
-			else {
-				self.getDefaultScope(oz).addCallback(function(scope) {
-					ps.scope = scope;
+			return ((ps.file) ? self.upload(ps.file) : succeed(null)).addCallback(function(upload) {
+				ps.upload = upload;
+				if (ps.scope) {
 					self._post(ps, oz);
-				});
-			}
+				}
+				else {
+					self.getDefaultScope(oz).addCallback(function(scope) {
+						ps.scope = scope;
+						self._post(ps, oz);
+					});
+				}
+			});
 		});
 	},
 
@@ -129,13 +132,17 @@ models.register({
 			imageUrl = ps.itemUrl.replace(this.YOUTUBE_REGEX,
 				'http://ytimg.googleusercontent.com/vi/$1/default.jpg');
 		}
+		if (ps.upload) {
+			imageUrl = ps.upload['url'];
+		}
 
 		var link = [];
 		link.push(
 			null, null, null,
-			ps.item || ps.page,
+			ps.upload ? '' : ps.item || ps.page,
 			null,
-			isYoutube ? [null, videoUrl, 385, 640] : null,
+			isYoutube ? [null, videoUrl, 385, 640] :
+				ps.upload ? [null, ps.upload['url'], ps.upload['height'], ps.upload['width']] : null,
 			null, null, null,
 			isYoutube ? [[null, ps.author, 'uploader']] : [],
 			null, null, null, null, null,
@@ -148,7 +155,12 @@ models.register({
 			link.push([null, ps.pageUrl, null, 'application/x-shockwave-flash', 'video']);
 			break;
 		case 'photo':
-			link.push([null, ps.pageUrl, null, 'text/html', 'document']);
+			if (ps.upload) {
+				link.push([null, ps.upload['photoPageUrl'], null, ps.upload['mimeType'], 'image']);
+			}
+			else {
+				link.push([null, ps.pageUrl, null, 'text/html', 'document']);
+			}
 			break;
 		default:
 			link.push([null, ps.itemUrl || ps.pageUrl, null, 'text/html', 'document']);
@@ -161,13 +173,31 @@ models.register({
 				[null, imageUrl, null, null],
 				[null, imageUrl, null, null]
 			],
-			null, null, null, null, null,
-			[[
-				null,
-				isYoutube ? 'youtube' : '',
-				'http://google.com/profiles/media/provider'
-			]]
+			null, null, null, null, null
 		);
+		if (ps.upload) {
+			link.push(
+				[
+					[null, 'picasa', 'http://google.com/profiles/media/provider'],
+					[
+						null,
+						'albumid=' + ps.upload['albumid'] + '&photoid=' + ps.upload['photoid'],
+						'http://google.com/profiles/media/onepick_media_id'
+					]
+				]
+			);
+		}
+		else {
+			link.push(
+				[
+					[
+						null,
+						isYoutube ? 'youtube' : '',
+						'http://google.com/profiles/media/provider'
+					]
+				]
+			);
+		}
 
 		return JSON.stringify(link);
 	},
@@ -239,12 +269,14 @@ models.register({
 		spar.push(
 			(ps.type != 'regular') ? ps.description : joinText([ps.item, ps.description], "\n\n"),
 			this.getToken(oz),
-			null, null, null, null
+			null,
+			ps.upload ? ps.upload['albumid'] : null,
+			null, null
 		);
 
 		var link = this.createLinkSpar(ps);
 
-		if (ps.type == 'photo') {
+		if (ps.type == 'photo' && !ps.upload) {
 			var photo = this.craetePhotoSpar(ps);
 			spar.push(JSON.stringify([link, photo]));
 		}
@@ -255,6 +287,9 @@ models.register({
 		spar.push(null);
 		spar.push(this.createScopeSpar(ps));
 		spar.push(true, [], true, true, null, [], false, false);
+		if (ps.upload) {
+			spar.push(null, null, oz[2][0]);
+		}
 
 		spar = JSON.stringify(spar);
 
@@ -270,6 +305,88 @@ models.register({
 			}
 		}).addCallback(function(res) {
 			return res.responseText;
+		});
+	},
+
+	UPLOAD_URL : 'https://plus.google.com/_/upload/photos/resumable',
+
+	createUploadSession : function(file) {
+		var self = this;
+
+		var data = {
+			"protocolVersion"     : "0.8",
+			"createSessionRequest": {
+				"fields": [
+					{
+						"external": {
+							"name"     : "file",
+							"filename" : file.leafName,
+							"put"      : {},
+							"size"     : file.fileSize
+						}
+					},
+					{
+						"inlined": {
+							"name"        : "batchid",
+							"content"     : String(Date.now()),
+							"contentType" : "text/plain"
+						}
+					},
+					{
+						"inlined": {
+							"name"       : "disable_asbe_notification",
+							"content"    : "true",
+							"contentType": "text/plain"
+						}
+					},
+					{
+						"inlined": {
+							"name"        : "streamid",
+							"content"     : "updates",
+							"contentType" : "text/plain"
+						}
+					},
+					{
+						"inlined": {
+							"name"        : "use_upload_size_pref",
+							"content"     : "true",
+							"contentType" : "text/plain"
+						}
+					}
+				]
+			}
+		};
+
+		return request(this.UPLOAD_URL + '?authuser=0', {
+			method : 'POST',
+			redirectionLimit : 0,
+			sendContent : JSON.stringify(data)
+		}).addCallback(function(res) {
+			var status = JSON.parse(res.responseText);
+			if (status['sessionStatus']) {
+				return status;
+			}
+			return null;
+		});
+	},
+
+	upload : function(file) {
+		return this.createUploadSession(file).addCallback(function(status) {
+			if (!status) return null;
+
+			var bis = new BinaryInputStream(IOService.newChannelFromURI(createURI(file)).open());
+
+			return request(status['sessionStatus']['externalFieldTransfers'][0]['putInfo']['url'], {
+				method : 'POST',
+				redirectionLimit : 0,
+				sendContent : bis.readBytes(file.fileSize)
+			}).addCallback(function(res) {
+				var status = JSON.parse(res.responseText);
+				if (status['sessionStatus']) {
+					return status['sessionStatus']['additionalInfo']['uploader_service.GoogleRupioAdditionalInfo']['completionInfo']['customerSpecificInfo'];
+				}
+				return null;
+			});
 		});
 	}
 });
