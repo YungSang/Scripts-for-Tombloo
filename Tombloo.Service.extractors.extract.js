@@ -30,7 +30,7 @@ update(Tombloo.Service.extractors, {
 				}, ps);
 
 				if (!ps.body && ctx.selection) {
-					ps.body  = createFlavoredString(ctx.window.getSelection());
+					ps.body = createFlavoredString(ctx.window.getSelection());
 				}
 
 				return self.normalizeUrl(ps.itemUrl).addCallback(function(url){
