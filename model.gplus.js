@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.1
- * @date    : 2011-07-19
+ * @version : 3.0.2
+ * @date    : 2011-07-23
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -386,6 +386,7 @@
 	});
 
 	var circles = [];
+	var presets = [];
 
 	models[GOOGLE_PLUS_MODEL_NAME].getOZData().addCallback(function(oz) {
 		oz[12][0].forEach(function(circle) {
@@ -417,7 +418,7 @@
 			return a[0].name > b[0].name ? 1 : -1;
 		});
 
-		circles.push([{
+		presets.push([{
 			scopeType   : 'focusGroup',
 			name        : 'Your circles',
 			id          : [oz[2][0], '1c'].join('.'),
@@ -425,7 +426,7 @@
 			requiresKey : false,
 			groupType   : 'a'
 		}]);
-		circles.push([{
+		presets.push([{
 			scopeType   : 'focusGroup',
 			name        : 'Extended circles',
 			id          : [oz[2][0], '1f'].join('.'),
@@ -433,7 +434,7 @@
 			requiresKey : false,
 			groupType   : 'e'
 		}]);
-		circles.push([{
+		presets.push([{
 			scopeType   : 'anyone',
 			name        : 'Anyone',
 			id          : 'anyone',
@@ -455,10 +456,17 @@
 
 			appendChildNodes(selectBox, OPTION({value: ''}, 'Select Google+ Stream (or same as last one)'));
 
+			for (var i = 0, len = presets.length ; i < len ; i++) {
+				var preset = presets[i];
+				appendChildNodes(selectBox, OPTION({value: JSON.stringify(preset)}, preset[0].name));
+			}
+
+			var optGroup = OPTGROUP({label : 'Stream'});
 			for (var i = 0, len = circles.length ; i < len ; i++) {
 				var circle = circles[i];
-				appendChildNodes(selectBox, OPTION({value: JSON.stringify(circle)}, circle[0].name));
+				appendChildNodes(optGroup, OPTION({value: JSON.stringify(circle)}, circle[0].name));
 			}
+			appendChildNodes(selectBox, optGroup);
 			appendChildNodes(doc.getElementById('form'), selectBox);
 
 			var formPanel = winQuickPostForm.dialogPanel.formPanel;
