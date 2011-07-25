@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.2
- * @date    : 2011-07-23
+ * @version : 3.0.3
+ * @date    : 2011-07-25
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -142,7 +142,7 @@
 				isYoutube ? [null, videoUrl, 385, 640] :
 					ps.upload ? [null, ps.upload.url, ps.upload.height, ps.upload.width] : null,
 				null, null, null,
-				isYoutube ? [[null, ps.author, 'uploader']] : [],
+				isYoutube ? [[null, ps.author || '', 'uploader']] : [],
 				null, null, null, null, null,
 				null, null, null, null, null, null,
 				ps.body ? '&ldquo;' + (ps.body.flavors.html || ps.body) + '&rdquo;' : '',
