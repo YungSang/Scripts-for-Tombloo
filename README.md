@@ -9,5 +9,8 @@
 1. Tombloo.Service.extractors.extract.js  
 Quote 以外のタイプのポストにも選択中の文字列が渡せる用にするパッチ。
 
+1. Tombloo.Service.extractors.youtube.js  
+title と author情報がおかしいのを直すパッチ。
+
 1. model.gplus.js  
 Google+ 投稿用のモデル。
