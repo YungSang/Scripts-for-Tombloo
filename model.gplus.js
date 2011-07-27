@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.3
- * @date    : 2011-07-25
+ * @version : 3.0.4
+ * @date    : 2011-07-27
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -137,7 +137,7 @@
 			var link = [];
 			link.push(
 				null, null, null,
-				ps.upload ? '' : ps.item || ps.page,
+				ps.upload ? '' : isYoutube ? ps.page : ps.item || ps.page,
 				null,
 				isYoutube ? [null, videoUrl, 385, 640] :
 					ps.upload ? [null, ps.upload.url, ps.upload.height, ps.upload.width] : null,
@@ -343,7 +343,7 @@
 							}
 						},
 						{
-							inlined: {
+							inlined : {
 								name        : 'use_upload_size_pref',
 								content     : 'true',
 								contentType : 'text/plain'
