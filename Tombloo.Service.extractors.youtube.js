@@ -9,7 +9,6 @@
 		extract : function(ctx) {
 			ctx.title = ctx.title.replace(/[\n\r\t]+/gm, ' ').trim();
 			var author_anchor = $x('id("watch-username")', ctx.document);
-			
 			return {
 				type      : 'video',
 				item      : $x('//meta[@property="og:title"]/@content') || ctx.title,
