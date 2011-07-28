@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.5
- * @date    : 2011-07-27
+ * @version : 3.0.6
+ * @date    : 2011-07-28
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -145,7 +145,7 @@
 				isYoutube ? [[null, ps.author || '', 'uploader']] : [],
 				null, null, null, null, null,
 				null, null, null, null, null, null,
-				ps.body ? '&ldquo;' + (ps.body.flavors.html || ps.body) + '&rdquo;' : '',
+				ps.body ? '&ldquo;' + toPlainText(ps.body.flavors.html || ps.body) + '&rdquo;' : '',
 				null, null
 			);
 			switch (ps.type) {
@@ -474,4 +474,111 @@
 			formPanel.fields['scope'] = selectBox;
 		};
 	};
+
+/**
+ * The following functions are adopted
+ * from polygon planet (https://github.com/polygonplanet)
+ */
+/**
+ * HTMLテキストをプレーンテキストに変換 (一部のタグは残す)
+ *
+ * ポスト時に殆どのタグは除去されるため改行を合わせる
+ *
+ * @param  {String}   text   対象のテキスト
+ * @return {String}          変換したテキスト
+ *
+ */
+function toPlainText(text) {
+    let s, p, tags, restores, re, br, indent;
+    s = stringify(text);
+    if (s) {
+        re = {
+            nl    : /(\r\n|\r|\n)/g,
+            bold  : /<strong\b([^>]*)>([\s\S]*?)<\/strong>/gi,
+            space : /^[\u0009\u0020]+/gm,
+            split : /\s+/
+        };
+        br = function(a) {
+            return a.trim().replace(re.nl, '<br />$1');
+        };
+        indent = function(a) {
+            return a.trim().replace(re.space, function(m) {
+                return new Array(m.length + 1).join('&nbsp;');
+            });
+        };
+        // <strong>は無視されるため <b> に変換
+        s = indent(s).replace(re.bold, '<b$1>$2</b>');
+        tags = stringify(<>
+            a b strong s strike kbd em acronym
+            q blockquote ins del sub sup u dfn
+            i abbr cite font img ruby rb rt rp
+        </>).trim().split(re.split);
+        p = '';
+        do {
+            p += '~' + Math.random().toString(36).slice(-1);
+        } while (~s.indexOf(p));
+        restores = [];
+        tags.forEach(function(tag) {
+            let re;
+            if (~s.indexOf(tag)) {
+                re = new RegExp('</?' + tag + '\\b[^>]*>', 'gi');
+                s = s.replace(re, function(match) {
+                    let len = restores.length, from = p + len + p;
+                    restores[len] = {
+                        from : from,
+                        to   : match
+                    };
+                    return from;
+                });
+            }
+        });
+        // リスト(<li>)などを整形するためconvertToPlainTextを使用する
+        s = convertToPlainText(s);
+        // 保持したタグを元に戻す
+        if (restores && restores.length) {
+            restores.forEach(function(o) {
+                s = s.split(o.from).join(o.to);
+            });
+        }
+        s = br(indent(s));
+    }
+    return s;
+}
+
+// ----- Helper functions -----
+/**
+ * スカラー型となりうる値のみ文字列として評価する
+ *
+ * @param  {Mixed}   x   任意の値
+ * @return {String}      文字列としての値
+ */
+function stringify(x) {
+    let result = '', c;
+    if (x !== null) {
+        switch (typeof x) {
+            case 'string':
+            case 'number':
+            case 'xml':
+                result = x;
+                break;
+            case 'boolean':
+                result = x ? 1 : '';
+                break;
+            case 'object':
+                if (x) {
+                    c = x.constructor;
+                    if (c === String || c === Number) {
+                        result = x;
+                    } else if (c === Boolean) {
+                        result = x ? 1 : '';
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return result.toString();
+}
+
 })();
