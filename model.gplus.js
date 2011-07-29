@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.6
- * @date    : 2011-07-28
+ * @version : 3.0.7
+ * @date    : 2011-07-29
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -414,9 +414,13 @@
 			}
 		});
 
+/*
+ * Google+ supports circle sorting on a browser.
+ *
 		circles = circles.sort(function(a, b) {
 			return a[0].name > b[0].name ? 1 : -1;
 		});
+*/
 
 		presets.push([{
 			scopeType   : 'focusGroup',
