@@ -1,7 +1,7 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.8
+ * @version : 3.0.9
  * @date    : 2011-07-30
  * @author  : YungSang (http://topl.us/yungsang)
  *
@@ -145,7 +145,7 @@
 				isYoutube ? [[null, ps.author || '', 'uploader']] : [],
 				null, null, null, null, null,
 				null, null, null, null, null, null,
-				ps.body ? '&ldquo;' + toPlainText(ps.body.flavors.html || ps.body) + '&rdquo;' : '',
+				ps.body ? '&ldquo;' + toPlainText(getFlavor(ps.body, 'html')) + '&rdquo;' : '',
 				null, null
 			);
 			switch (ps.type) {
