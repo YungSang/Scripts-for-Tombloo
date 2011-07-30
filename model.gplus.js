@@ -1,8 +1,8 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.7
- * @date    : 2011-07-29
+ * @version : 3.0.8
+ * @date    : 2011-07-30
  * @author  : YungSang (http://topl.us/yungsang)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -59,7 +59,7 @@
 
 				var aclEntries = [];
 
-				for (var i = 2, len = data['aclEntries'].length ; i < len ; i+=2) {
+				for (var i = 0, len = data['aclEntries'].length ; i < len ; i+=2) {
 					var scope = data.aclEntries[i].scope;
 
 					if (scope.scopeType == 'anyone') {
@@ -71,7 +71,7 @@
 							requiresKey : false
 						});
 					}
-					else {
+					else if (scope.scopeType != 'user') {
 						aclEntries.push({
 							scopeType   : scope.scopeType,
 							name        : scope.name,
