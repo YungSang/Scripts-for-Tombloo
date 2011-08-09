@@ -14,3 +14,6 @@ title と author情報がおかしいのを直すパッチ。
 
 1. model.gplus.js  
 Google+ 投稿用のモデル。
+
+1. model.twitter-upload.js  
+Twitter のモデルに純正の画像アップロードを追加する。
