@@ -1,8 +1,8 @@
 /**
  * Model.Twitter Upload for Tombloo
  *
- * @version : 1.0.0
- * @date    : 2011-08-08
+ * @version : 1.0.1
+ * @date    : 2011-08-11
  * @author  : YungSang (http://yungsang.com/+)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -29,11 +29,10 @@
 			var self = this;
 			var POST_URL = 'http://upload.twitter.com/1/statuses/update_with_media.json';
 
-			var status = joinText([ps.description, (ps.body)? '"' + ps.body + '"' : '', ps.page, ps.pageUrl], ' ');
+			var status = joinText([ps.description, (ps.body)? '"' + ps.body + '"' : '', ps.item, ps.pageUrl], ' ');
 
-			return maybeDeferred((status.length < 140)? 
-				status : 
-				shortenUrls(status, models[this.SHORTEN_SERVICE])
+			return maybeDeferred((status.length < 140) ?
+				status : shortenUrls(status, models[this.SHORTEN_SERVICE])
 			).addCallback(function(shortend) {
 				status = shortend;
 				return self.getToken();
@@ -54,6 +53,10 @@
 					}
 				});
 			}).addCallback(function(res) {
+				var json = JSON.parse(res.responseText);
+				if (json.error) {
+					throw new Error(json.error);
+				}
 			});
 		}
 	});
