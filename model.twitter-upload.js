@@ -1,7 +1,7 @@
 /**
  * Model.Twitter Upload for Tombloo
  *
- * @version : 1.0.1
+ * @version : 1.1.0
  * @date    : 2011-08-11
  * @author  : YungSang (http://yungsang.com/+)
  *
@@ -20,12 +20,18 @@
 
 	update(models[TWITTER_MODEL_NAME], {
 		post : function(ps) {
-			if (ps.file) {
-				return this.upload(ps);
+			var self = this;
+			if (ps.type === 'photo') {
+				return this.download(ps).addCallback(function(file) {
+					self.upload(ps, file);
+				});
 			}
 			return this.update(joinText([ps.description, (ps.body)? '"' + ps.body + '"' : '', ps.item, ps.itemUrl], ' '));
 		},
-		upload : function(ps) {
+		download : function(ps) {
+			return (ps.file ? succeed(ps.file) : download(ps.itemUrl, getTempDir()));
+		},
+		upload : function(ps, file) {
 			var self = this;
 			var POST_URL = 'http://upload.twitter.com/1/statuses/update_with_media.json';
 
@@ -37,12 +43,12 @@
 				status = shortend;
 				return self.getToken();
 			}).addCallback(function(token) {
-				var bis = new BinaryInputStream(IOService.newChannelFromURI(createURI(ps.file)).open());
+				var bis = new BinaryInputStream(IOService.newChannelFromURI(createURI(file)).open());
 
 				return request(POST_URL, {
 					sendContent : {
 						status                  : status,
-						'media_data[]'          : btoa(bis.readBytes(ps.file.fileSize)),
+						'media_data[]'          : btoa(bis.readBytes(file.fileSize)),
 						include_entities        : 'true',
 						post_authenticity_token : token.authenticity_token
 					},
@@ -51,12 +57,13 @@
 						'X-Phx'            : true,
 						'X-Requested-With' : 'XMLHttpRequest'
 					}
+				}).addCallback(function(res) {
+					var json = JSON.parse(res.responseText);
+					if (json.error) {
+						throw new Error(json.error);
+					}
+					return json;
 				});
-			}).addCallback(function(res) {
-				var json = JSON.parse(res.responseText);
-				if (json.error) {
-					throw new Error(json.error);
-				}
 			});
 		}
 	});
