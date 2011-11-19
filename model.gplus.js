@@ -19,7 +19,6 @@
 		INIT_URL : 'https://plus.google.com/u/0/_/initialdata',
 		POST_URL : 'https://plus.google.com/u/0/_/sharebox/post/',
 		sequence : 0,
-		OZDATA_REGEX : /<script\b[^>]*>[\s\S]*?\btick\b[\s\S]*?\bvar\s+OZ_initData\s*=\s*([{]+(?:(?:(?![}]\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>)[\s\S])*)*[}])\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>/i,
 		YOUTUBE_REGEX : /http:\/\/(?:.*\.)?youtube.com\/watch\?v=([a-zA-Z0-9_-]+)[-_.!~*'()a-zA-Z0-9;\/?:@&=+\$,%#]*/g,
 
 		check : function(ps) {
@@ -32,30 +31,43 @@
 
 		getOZData : function() {
 			var self = this;
-			return request(this.HOME_URL).addCallback(function(res) {
-				var OZ_initData = res.responseText.match(self.OZDATA_REGEX)[1];
-				return evalInSandbox('(' + OZ_initData + ')', self.HOME_URL);
+			return this.getInitialData(1).addCallback(function(oz1) {
+				return self.getInitialData(2).addCallback(function(oz2) {
+					return {'1': oz1, '2': oz2};
+				});
 			});
 		},
 
-		getInitialData : function(oz) {
+		getInitialData : function(key) {
 			var self = this;
-			return request(this.INIT_URL + '?_reqid=' + this.getReqid() + '&rt=j', {
-				sendContent : {
-					key : 11,
-					at  : oz[1][15]
-				}
-			}).addCallback(function(res) {
+			return request(this.INIT_URL + '?' + queryString({
+				key    : key,
+				_reqid : this.getReqid(),
+				rt     : 'j'
+			})).addCallback(function(res) {
 				var initialData = res.responseText.substr(4).replace(/(\\n|\n)/g, '');
-				return evalInSandbox('(' + initialData + ')', self.HOME_URL);
+				var data = evalInSandbox('(' + initialData + ')', self.HOME_URL);
+				data = self.getDataByKey(data[0], 'idr');
+				if (!data) return null;
+				var data = evalInSandbox('(' + data[1] + ')', self.HOME_URL);
+				return data[key];
 			});
+		},
+
+		getDataByKey : function(arr, key) {
+			for (var i = 0, len = arr.length ; i < len ; i++) {
+				var data = arr[i];
+				if (data[0] === key) {
+					return data;
+				}
+			}
+			return null;
 		},
 
 		getDefaultScope : function(oz) {
 			var self = this;
-			return this.getInitialData(oz).addCallback(function(data) {
-				data = evalInSandbox('(' + data[0][0][1] + ')', self.HOME_URL);
-				data = evalInSandbox('(' + data[11][0] + ')', self.HOME_URL);
+			return this.getInitialData(11).addCallback(function(data) {
+				data = evalInSandbox('(' + data[0] + ')', self.HOME_URL);
 
 				var aclEntries = [];
 
@@ -389,62 +401,58 @@
 	var presets = [];
 
 	models[GOOGLE_PLUS_MODEL_NAME].getOZData().addCallback(function(oz) {
-		oz[12][0].forEach(function(circle) {
-			let code, id, name, has;
-			code = circle[0][0];
-			id   = [oz[2][0], code].join('.');
-			name = circle[1][0];
-			if (code && name) {
-				has = false;
-				circles.forEach(function(c) {
-					if (!has && c[0].id === id) {
-						has = true;
+		models[GOOGLE_PLUS_MODEL_NAME].getInitialData(12).addCallback(function(data) {
+			if (data) {
+				data[0].forEach(function(circle) {
+					let code, id, name, has;
+					code = circle[0][0];
+					id   = [oz[2][0], code].join('.');
+					name = circle[1][0];
+					if (code && name) {
+						has = false;
+						circles.forEach(function(c) {
+							if (!has && c[0].id === id) {
+								has = true;
+							}
+						});
+						if (!has) {
+							circles.push([{
+								scopeType   : 'focusGroup',
+								name        : name,
+								id          : id,
+								me          : false,
+								requiresKey : false,
+								groupType   : 'p'
+							}]);
+						}
 					}
 				});
-				if (!has) {
-					circles.push([{
-						scopeType   : 'focusGroup',
-						name        : name,
-						id          : id,
-						me          : false,
-						requiresKey : false,
-						groupType   : 'p'
-					}]);
-				}
 			}
-		});
 
-/*
- * Google+ supports circle sorting on a browser.
- *
-		circles = circles.sort(function(a, b) {
-			return a[0].name > b[0].name ? 1 : -1;
+			presets.push([{
+				scopeType   : 'focusGroup',
+				name        : 'Your circles',
+				id          : [oz[2][0], '1c'].join('.'),
+				me          : false,
+				requiresKey : false,
+				groupType   : 'a'
+			}]);
+			presets.push([{
+				scopeType   : 'focusGroup',
+				name        : 'Extended circles',
+				id          : [oz[2][0], '1f'].join('.'),
+				me          : false,
+				requiresKey : false,
+				groupType   : 'e'
+			}]);
+			presets.push([{
+				scopeType   : 'anyone',
+				name        : 'Anyone',
+				id          : 'anyone',
+				me          : true,
+				requiresKey : false
+			}]);
 		});
-*/
-
-		presets.push([{
-			scopeType   : 'focusGroup',
-			name        : 'Your circles',
-			id          : [oz[2][0], '1c'].join('.'),
-			me          : false,
-			requiresKey : false,
-			groupType   : 'a'
-		}]);
-		presets.push([{
-			scopeType   : 'focusGroup',
-			name        : 'Extended circles',
-			id          : [oz[2][0], '1f'].join('.'),
-			me          : false,
-			requiresKey : false,
-			groupType   : 'e'
-		}]);
-		presets.push([{
-			scopeType   : 'anyone',
-			name        : 'Anyone',
-			id          : 'anyone',
-			me          : true,
-			requiresKey : false
-		}]);
 	});
 
 	QuickPostForm.show = function(ps, position, message) {
