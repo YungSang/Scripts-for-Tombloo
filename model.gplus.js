@@ -1,9 +1,9 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 1.0.4
- * @date    : 2011-07-17
- * @author  : YungSang (http://topl.us/yungsang)
+ * @version : 1.1
+ * @date    : 2011-11-17
+ * @author  : YungSang (http://yungsang.com/+)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
  */
@@ -11,9 +11,9 @@ models.register({
 	name     : 'Google+',
 	ICON     : 'http://ssl.gstatic.com/s2/oz/images/favicon.ico',
 	HOME_URL : 'https://plus.google.com/',
+	INIT_URL : 'https://plus.google.com/u/0/_/initialdata',
 	POST_URL : 'https://plus.google.com/u/0/_/sharebox/post/',
 	sequence : 0,
-	OZDATA_REGEX : /<script\b[^>]*>[\s\S]*?\btick\b[\s\S]*?\bvar\s+OZ_initData\s*=\s*([{]+(?:(?:(?![}]\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>)[\s\S])*)*[}])\s*;[\s\S]{0,24}\btick\b[\s\S]{0,12}<\/script>/i,
 	YOUTUBE_REGEX : /http:\/\/(?:.*\.)?youtube.com\/watch\?v=([a-zA-Z0-9_-]+)[-_.!~*'()a-zA-Z0-9;\/?:@&=+\$,%#]*/g,
 
 	check : function(ps) {
@@ -26,10 +26,37 @@ models.register({
 
 	getOZData : function() {
 		var self = this;
-		return request(this.HOME_URL).addCallback(function(res) {
-			var OZ_initData = res.responseText.match(self.OZDATA_REGEX)[1];
-			return evalInSandbox('(' + OZ_initData + ')', self.HOME_URL);
+		return this.getInitialData(1).addCallback(function(oz1) {
+			return self.getInitialData(2).addCallback(function(oz2) {
+				return {'1': oz1, '2': oz2};
+			});
 		});
+	},
+
+	getInitialData : function(key) {
+		var self = this;
+		return request(this.INIT_URL + '?' + queryString({
+			key    : key,
+			_reqid : this.getReqid(),
+			rt     : 'j'
+		})).addCallback(function(res) {
+			var initialData = res.responseText.substr(4).replace(/(\\n|\n)/g, '');
+			var data = evalInSandbox('(' + initialData + ')', self.HOME_URL);
+			data = self.getDataByKey(data[0], 'idr');
+			if (!data) return null;
+			var data = evalInSandbox('(' + data[1] + ')', self.HOME_URL);
+			return data[key];
+		});
+	},
+
+	getDataByKey : function(arr, key) {
+		for (var i = 0, len = arr.length ; i < len ; i++) {
+			var data = arr[i];
+			if (data[0] === key) {
+				return data;
+			}
+		}
+		return null;
 	},
 
 	post : function(ps) {
