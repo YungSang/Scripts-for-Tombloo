@@ -1,9 +1,9 @@
 /**
  * Model.Google+ for Tombloo
  *
- * @version : 3.0.9
- * @date    : 2011-07-30
- * @author  : YungSang (http://topl.us/yungsang)
+ * @version : 3.1
+ * @date    : 2011-11-17
+ * @author  : YungSang (http://yungsang.com/+)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
  *
