@@ -1,8 +1,8 @@
 /**
  * Model.Twitter Upload for Tombloo
  *
- * @version : 1.1.0
- * @date    : 2011-08-11
+ * @version : 1.1.1
+ * @date    : 2011-11-20
  * @author  : YungSang (http://yungsang.com/+)
  *
  * [Tombloo]: https://github.com/to/tombloo/wiki
@@ -33,7 +33,7 @@
 		},
 		upload : function(ps, file) {
 			var self = this;
-			var POST_URL = 'http://upload.twitter.com/1/statuses/update_with_media.json';
+			var POST_URL = 'https://upload.twitter.com/1/statuses/update_with_media.json';
 
 			var status = joinText([ps.description, (ps.body)? '"' + ps.body + '"' : '', ps.item, ps.pageUrl], ' ');
 
@@ -53,7 +53,7 @@
 						post_authenticity_token : token.authenticity_token
 					},
 					headers : {
-						Referer            : 'http://upload.twitter.com/receiver.html',
+						Referer            : 'https://upload.twitter.com/receiver.html',
 						'X-Phx'            : true,
 						'X-Requested-With' : 'XMLHttpRequest'
 					}
