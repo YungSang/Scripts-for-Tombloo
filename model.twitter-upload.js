@@ -1,7 +1,7 @@
 /**
  * Model.Twitter Upload for Tombloo
  *
- * @version : 1.1.1
+ * @version : 1.2
  * @date    : 2011-11-20
  * @author  : YungSang (http://yungsang.com/+)
  *
@@ -18,16 +18,17 @@
 		return result;
 	});
 
+	addAround(models[TWITTER_MODEL_NAME], 'post', function(proceed, args, self) {
+		let ps = args[0];
+		if (ps.type === 'photo') {
+			return self.download(ps).addCallback(function(file) {
+				return self.upload(ps, file);
+			});
+		}
+		return proceed(args);
+	});
+
 	update(models[TWITTER_MODEL_NAME], {
-		post : function(ps) {
-			var self = this;
-			if (ps.type === 'photo') {
-				return this.download(ps).addCallback(function(file) {
-					self.upload(ps, file);
-				});
-			}
-			return this.update(joinText([ps.description, (ps.body)? '"' + ps.body + '"' : '', ps.item, ps.itemUrl], ' '));
-		},
 		download : function(ps) {
 			return (ps.file ? succeed(ps.file) : download(ps.itemUrl, getTempDir()));
 		},
